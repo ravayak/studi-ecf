@@ -1,0 +1,27 @@
+all:
+  vars:
+    env: dev
+  hosts:
+    db-mongodb-master:
+      ansible_host: <adresse_ip_master>
+      ansible_user: root
+      database_replica_type: "master"
+
+    db-mongodb-slave-1:
+      ansible_host: <adresse_ip_slave_1>
+      ansible_user: root
+      database_replica_type: "slave"
+
+    db-mongodb-slave-2:
+      ansible_host: <adresse_ip_slave_2>
+      ansible_user: root
+      database_replica_type: "slave"
+
+  children:
+    db-mongodb-master:
+      hosts: db-mongodb-master
+
+    db-mongodb-slave:
+      hosts:
+        db-mongodb-slave-1:
+        db-mongodb-slave-2:

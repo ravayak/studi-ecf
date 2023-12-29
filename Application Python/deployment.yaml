@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-app-deployment
+  labels:
+    app: python-app
+    tier: backend
+    phase: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: python-app
+  template:
+    metadata:
+      labels:
+        app: python-app
+        tier: backend
+        phase: production
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 3000
+      containers:
+        - name: python-app
+          image: ynno/python-app:latest
+          imagePullPolicy: Always
+          resources:
+            limits:
+              memory: "256Mi" # Limite mémoire
+              cpu: "200m" # Limite CPU
+            requests:
+              memory: "128Mi" # Demande mémoire
+              cpu: "100m" # Demande CPU
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true

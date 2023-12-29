@@ -1,0 +1,76 @@
+- name: Install mongodb
+  apt:
+    name: mongodb-org
+    state: present
+    allow_unauthenticated: yes
+
+- name: Enable and start MongoDB service
+  service:
+    name: mongod
+    state: started
+    enabled: yes
+
+- name: Enable remote connections in MongoDB
+  lineinfile:
+    path: /etc/mongod.conf
+    regexp: "^ *bindIp:.*"
+    line: "  bindIp: 0.0.0.0"
+    state: present
+    backup: yes
+  notify:
+    - Restart MongoDB Service
+
+- name: Enable authentication in MongoDB
+  lineinfile:
+    path: /etc/mongod.conf
+    line: "security:\n  authorization: enabled"
+    insertafter: "^#security:"
+    state: present
+    backup: yes
+  notify:
+    - Restart MongoDB Service
+
+- name: Add replication configuration to mongodb.conf
+  lineinfile:
+    path: /etc/mongod.conf
+    line: "{{ item }}"
+    insertafter: "^#security:"
+    state: present
+  notify:
+    - Restart MongoDB Service
+  with_items:
+    - "replication:"
+    - '  replSetName: "rs0"'
+
+- name: Prepare authorization key file
+  local_action: shell openssl rand -base64 756 > {{ playbook_dir }}/passwords/{{ env }}/mongodb-key
+  when: database_replica_type == "master"
+
+- name: Create mongodb home directory
+  file:
+    state: directory
+    path: /home/mongodb
+    owner: mongodb
+    group: mongodb
+    mode: 0755
+
+- name: Copies key to both master and slaves
+  copy:
+    src: "{{ playbook_dir + '/passwords/' + env + '/mongodb-key'}}"
+    dest: /home/mongodb/mongodb-key
+    owner: mongodb
+    group: mongodb
+    mode: 0400
+  when: database_replica_type != false
+
+- name: Add key to mongodb configuration
+  lineinfile:
+    dest: /etc/mongod.conf
+    state: present
+    regexp: "#  keyFile:"
+    line: "  keyFile: /home/mongodb/mongodb-key"
+    backrefs: yes
+  when: database_replica_type != false
+
+- name: Restart mongodb
+  command: systemctl restart mongodb.service
